@@ -2,51 +2,53 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#111a17">
-  <title>霓虹贪吃蛇</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#101412">
+  <title>果冻消消乐</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="game-shell">
-    <header class="hero">
+    <header class="topbar">
       <div>
-        <p class="eyebrow">ARCADE / 经典模式</p>
-        <h1>霓虹贪吃蛇</h1>
+        <p class="eyebrow">MATCH CLUB / 今日挑战</p>
+        <h1>果冻消消乐</h1>
       </div>
-      <button id="soundButton" class="icon-button" type="button" aria-label="切换音效">音效 开</button>
+      <button id="soundButton" class="pill-button" type="button">音效 开</button>
     </header>
 
-    <section class="scoreboard" aria-label="游戏数据">
-      <div><span>本局得分</span><strong id="score">000</strong></div>
-      <div><span>最高纪录</span><strong id="highScore">000</strong></div>
-      <div><span>当前速度</span><strong id="speed">1.0x</strong></div>
+    <section class="mission" aria-label="关卡目标">
+      <div class="level-badge"><span>关卡</span><strong>01</strong></div>
+      <div class="mission-copy">
+        <span>本局目标</span>
+        <strong>获得 <b id="targetScore">3000</b> 分</strong>
+        <div class="progress"><i id="progressBar"></i></div>
+      </div>
     </section>
 
-    <section class="board-wrap">
-      <canvas id="game" width="600" height="600" aria-label="贪吃蛇游戏区域"></canvas>
-      <p class="swipe-hint" aria-hidden="true">点击棋盘控制方向</p>
+    <section class="stats" aria-label="游戏数据">
+      <div><span>得分</span><strong id="score">0000</strong></div>
+      <div><span>剩余步数</span><strong id="moves">25</strong></div>
+      <div><span>最高分</span><strong id="best">0000</strong></div>
+    </section>
+
+    <section id="boardWrap" class="board-wrap">
+      <canvas id="game" width="640" height="640" aria-label="消消乐游戏棋盘"></canvas>
+      <div id="combo" class="combo" aria-live="polite"></div>
       <div id="overlay" class="overlay">
-        <p id="overlayTag" class="eyebrow">准备好了吗？</p>
-        <h2 id="overlayTitle">按方向键开始</h2>
-        <p id="overlayText">吃掉能量果实，别撞到墙壁和自己。</p>
+        <p id="overlayTag" class="eyebrow">轻松一下</p>
+        <h2 id="overlayTitle">点击开始消除</h2>
+        <p id="overlayText">依次点击两个相邻果冻，凑出三个或更多同色果冻。</p>
         <button id="startButton" class="primary-button" type="button">开始游戏</button>
       </div>
     </section>
 
     <div class="actions">
-      <button id="pauseButton" class="secondary-button" type="button">暂停</button>
-      <button id="restartButton" class="secondary-button" type="button">重新开始</button>
+      <button id="hintButton" type="button">提示</button>
+      <button id="shuffleButton" type="button">重排</button>
+      <button id="restartButton" type="button">重新开始</button>
     </div>
-
-    <section class="mobile-controls" aria-label="触屏方向控制">
-      <button data-direction="up" aria-label="向上">↑</button>
-      <button data-direction="left" aria-label="向左">←</button>
-      <button data-direction="down" aria-label="向下">↓</button>
-      <button data-direction="right" aria-label="向右">→</button>
-    </section>
-
-    <footer><span class="desktop-tip">点击棋盘 / 方向键移动 · 空格暂停</span><span class="mobile-tip">点击蛇头四周控制方向</span></footer>
+    <p class="tip">点击两个相邻果冻进行交换</p>
   </main>
   <script src="game.js"></script>
 </body>

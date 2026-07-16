@@ -1,107 +1,265 @@
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
 const scoreEl = document.querySelector('#score');
-const highScoreEl = document.querySelector('#highScore');
-const speedEl = document.querySelector('#speed');
+const movesEl = document.querySelector('#moves');
+const bestEl = document.querySelector('#best');
+const progressBar = document.querySelector('#progressBar');
 const overlay = document.querySelector('#overlay');
 const overlayTag = document.querySelector('#overlayTag');
 const overlayTitle = document.querySelector('#overlayTitle');
 const overlayText = document.querySelector('#overlayText');
 const startButton = document.querySelector('#startButton');
-const pauseButton = document.querySelector('#pauseButton');
-const restartButton = document.querySelector('#restartButton');
+const comboEl = document.querySelector('#combo');
 const soundButton = document.querySelector('#soundButton');
 
-const GRID = 20;
-const CELL = canvas.width / GRID;
-const START_DELAY = 145;
-let snake, food, direction, queuedDirection, score, timer, state;
-let highScore = Number(localStorage.getItem('neon-snake-high-score') || 0);
-let soundOn = localStorage.getItem('neon-snake-sound') !== 'off';
+const SIZE = 8;
+const CELL = canvas.width / SIZE;
+const TYPES = 6;
+const TARGET = 3000;
+const START_MOVES = 25;
+const COLORS = ['#ff6f91', '#ffd85a', '#66d9ff', '#9c7cff', '#63e49a', '#ff9c52'];
+let board = [];
+let selected = null;
+let score = 0;
+let moves = START_MOVES;
+let busy = false;
+let playing = false;
+let soundOn = localStorage.getItem('match-sound') !== 'off';
+let best = Number(localStorage.getItem('match-best') || 0);
 
-function reset() {
-  clearTimeout(timer);
-  snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
-  direction = { x: 1, y: 0 };
-  queuedDirection = direction;
+function makeBoard() {
+  board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+  for (let row = 0; row < SIZE; row++) {
+    for (let col = 0; col < SIZE; col++) {
+      let type;
+      do type = Math.floor(Math.random() * TYPES);
+      while ((col >= 2 && board[row][col - 1] === type && board[row][col - 2] === type) || (row >= 2 && board[row - 1][col] === type && board[row - 2][col] === type));
+      board[row][col] = type;
+    }
+  }
+  if (!findPossibleMove()) makeBoard();
+}
+
+function startGame() {
   score = 0;
-  state = 'ready';
-  placeFood();
+  moves = START_MOVES;
+  selected = null;
+  playing = true;
+  busy = false;
+  makeBoard();
   updateHud();
   draw();
-  showOverlay('准备好了吗？', '按方向键开始', '吃掉能量果实，别撞到墙壁和自己。', '开始游戏');
-  pauseButton.textContent = '暂停';
-}
-
-function start() {
-  if (state === 'playing') return;
-  if (state === 'gameover') reset();
-  state = 'playing';
   overlay.classList.add('hidden');
-  scheduleTick();
 }
 
-function scheduleTick() {
-  clearTimeout(timer);
-  timer = setTimeout(tick, Math.max(58, START_DELAY - score * 2.5));
-}
-
-function tick() {
-  if (state !== 'playing') return;
-  direction = queuedDirection;
-  const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
-  const hitWall = head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID;
-  const hitSelf = snake.some(part => part.x === head.x && part.y === head.y);
-  if (hitWall || hitSelf) return endGame();
-
-  snake.unshift(head);
-  if (head.x === food.x && head.y === food.y) {
-    score += 10;
-    highScore = Math.max(highScore, score);
-    localStorage.setItem('neon-snake-high-score', highScore);
-    beep(680, 0.06);
-    placeFood();
-    updateHud();
-  } else {
-    snake.pop();
+function draw(highlights = []) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#151c18';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (let row = 0; row < SIZE; row++) {
+    for (let col = 0; col < SIZE; col++) {
+      const type = board[row]?.[col];
+      if (type === null || type === undefined) continue;
+      const x = col * CELL;
+      const y = row * CELL;
+      ctx.fillStyle = (row + col) % 2 ? '#18211c' : '#1b251f';
+      ctx.fillRect(x, y, CELL, CELL);
+      drawJelly(x + CELL / 2, y + CELL / 2, type, selected?.row === row && selected?.col === col, highlights.some(item => item.row === row && item.col === col));
+    }
   }
+}
+
+function drawJelly(x, y, type, isSelected, isHint) {
+  const radius = CELL * .33;
+  ctx.save();
+  ctx.translate(x, y);
+  if (isSelected || isHint) {
+    ctx.strokeStyle = isHint ? '#ffffff' : '#c9ff5d';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius + 8, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.shadowColor = COLORS[type];
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = COLORS[type];
+  ctx.beginPath();
+  if (type === 0) {
+    ctx.arc(0, 1, radius, 0, Math.PI * 2);
+  } else if (type === 1) {
+    roundedPath(-radius, -radius, radius * 2, radius * 2, 13);
+  } else if (type === 2) {
+    ctx.moveTo(0, -radius - 2); ctx.lineTo(radius + 2, 0); ctx.lineTo(0, radius + 2); ctx.lineTo(-radius - 2, 0); ctx.closePath();
+  } else if (type === 3) {
+    polygon(0, 0, radius + 2, 6);
+  } else if (type === 4) {
+    ctx.arc(0, 0, radius, Math.PI, 0); ctx.lineTo(radius * .72, radius * .72); ctx.quadraticCurveTo(0, radius * 1.12, -radius * .72, radius * .72); ctx.closePath();
+  } else {
+    polygon(0, 0, radius + 2, 5);
+  }
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,.48)';
+  ctx.beginPath(); ctx.ellipse(-radius * .32, -radius * .35, radius * .22, radius * .13, -.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function roundedPath(x, y, width, height, radius) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, width, height, radius);
+  else ctx.rect(x, y, width, height);
+}
+
+function polygon(x, y, radius, sides) {
+  ctx.moveTo(x, y - radius);
+  for (let i = 1; i < sides; i++) {
+    const angle = -Math.PI / 2 + i * Math.PI * 2 / sides;
+    ctx.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+  }
+  ctx.closePath();
+}
+
+function boardPosition(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return { col: Math.floor((clientX - rect.left) / rect.width * SIZE), row: Math.floor((clientY - rect.top) / rect.height * SIZE) };
+}
+
+function handlePick(cell) {
+  if (!playing || busy || cell.row < 0 || cell.row >= SIZE || cell.col < 0 || cell.col >= SIZE) return;
+  if (!selected) {
+    selected = cell;
+    draw();
+    beep(360, .025);
+    return;
+  }
+  if (selected.row === cell.row && selected.col === cell.col) {
+    selected = null;
+    draw();
+    return;
+  }
+  if (Math.abs(selected.row - cell.row) + Math.abs(selected.col - cell.col) !== 1) {
+    selected = cell;
+    draw();
+    return;
+  }
+  trySwap(selected, cell);
+}
+
+async function trySwap(a, b) {
+  busy = true;
+  swap(a, b);
+  selected = null;
   draw();
-  scheduleTick();
+  await wait(160);
+  if (!findMatches().length) {
+    swap(a, b);
+    draw();
+    beep(130, .08);
+    await wait(130);
+    busy = false;
+    return;
+  }
+  moves--;
+  await resolveBoard();
+  updateHud();
+  busy = false;
+  if (score >= TARGET || moves <= 0) finishGame();
+  else if (!findPossibleMove()) shuffleBoard(false);
 }
 
-function placeFood() {
-  do {
-    food = { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
-  } while (snake && snake.some(part => part.x === food.x && part.y === food.y));
+async function resolveBoard() {
+  let chain = 0;
+  let matches;
+  while ((matches = findMatches()).length) {
+    chain++;
+    score += matches.length * 50 * chain;
+    if (chain > 1) showCombo(chain);
+    matches.forEach(({ row, col }) => board[row][col] = null);
+    draw();
+    beep(500 + chain * 90, .06);
+    updateHud();
+    await wait(180);
+    collapse();
+    draw();
+    await wait(190);
+  }
+  best = Math.max(best, score);
+  localStorage.setItem('match-best', best);
 }
 
-function setDirection(next) {
-  if (next.x + direction.x === 0 && next.y + direction.y === 0) return;
-  queuedDirection = next;
-  if (state === 'ready') start();
+function findMatches() {
+  const found = new Map();
+  const add = (row, col) => found.set(`${row}-${col}`, { row, col });
+  for (let row = 0; row < SIZE; row++) {
+    let start = 0;
+    for (let col = 1; col <= SIZE; col++) {
+      if (col < SIZE && board[row][col] === board[row][start] && board[row][col] !== null) continue;
+      if (col - start >= 3 && board[row][start] !== null) for (let x = start; x < col; x++) add(row, x);
+      start = col;
+    }
+  }
+  for (let col = 0; col < SIZE; col++) {
+    let start = 0;
+    for (let row = 1; row <= SIZE; row++) {
+      if (row < SIZE && board[row][col] === board[start][col] && board[row][col] !== null) continue;
+      if (row - start >= 3 && board[start][col] !== null) for (let y = start; y < row; y++) add(y, col);
+      start = row;
+    }
+  }
+  return [...found.values()];
 }
 
-function togglePause() {
-  if (state === 'ready') return start();
-  if (state === 'gameover') return;
-  if (state === 'playing') {
-    state = 'paused';
-    clearTimeout(timer);
-    pauseButton.textContent = '继续';
-    showOverlay('游戏暂停', '喘口气', '准备好后继续冲击最高纪录。', '继续游戏');
-  } else {
-    state = 'playing';
-    pauseButton.textContent = '暂停';
-    overlay.classList.add('hidden');
-    scheduleTick();
+function collapse() {
+  for (let col = 0; col < SIZE; col++) {
+    const values = [];
+    for (let row = SIZE - 1; row >= 0; row--) if (board[row][col] !== null) values.push(board[row][col]);
+    for (let row = SIZE - 1, i = 0; row >= 0; row--, i++) board[row][col] = i < values.length ? values[i] : Math.floor(Math.random() * TYPES);
   }
 }
 
-function endGame() {
-  state = 'gameover';
-  beep(150, 0.16);
-  draw(true);
-  showOverlay('本局结束', `得分 ${score}`, score === highScore && score > 0 ? '新纪录！这一局相当漂亮。' : '调整路线，再来一局。', '再玩一次');
+function swap(a, b) {
+  [board[a.row][a.col], board[b.row][b.col]] = [board[b.row][b.col], board[a.row][a.col]];
+}
+
+function findPossibleMove() {
+  for (let row = 0; row < SIZE; row++) {
+    for (let col = 0; col < SIZE; col++) {
+      for (const delta of [{ row: 0, col: 1 }, { row: 1, col: 0 }]) {
+        const next = { row: row + delta.row, col: col + delta.col };
+        if (next.row >= SIZE || next.col >= SIZE) continue;
+        const here = { row, col };
+        swap(here, next);
+        const valid = findMatches().length > 0;
+        swap(here, next);
+        if (valid) return [here, next];
+      }
+    }
+  }
+  return null;
+}
+
+function showHint() {
+  if (!playing || busy) return;
+  const move = findPossibleMove();
+  if (!move) return shuffleBoard(false);
+  draw(move);
+  setTimeout(() => draw(), 900);
+}
+
+function shuffleBoard(costsMove = true) {
+  if (!playing || busy) return;
+  if (costsMove && moves > 1) moves--;
+  makeBoard();
+  selected = null;
+  draw();
+  updateHud();
+  beep(250, .05);
+}
+
+function finishGame() {
+  playing = false;
+  const won = score >= TARGET;
+  showOverlay(won ? '挑战成功' : '步数用完', won ? '漂亮的连击！' : `本局 ${score} 分`, won ? `你用 ${START_MOVES - moves} 步完成了目标。` : '再试一次，四连和连续消除得分更高。', '再玩一局');
 }
 
 function showOverlay(tag, title, text, button) {
@@ -112,47 +270,19 @@ function showOverlay(tag, title, text, button) {
   overlay.classList.remove('hidden');
 }
 
+function showCombo(chain) {
+  comboEl.textContent = `${chain} 连击!`;
+  comboEl.classList.remove('show');
+  void comboEl.offsetWidth;
+  comboEl.classList.add('show');
+}
+
 function updateHud() {
-  scoreEl.textContent = String(score).padStart(3, '0');
-  highScoreEl.textContent = String(highScore).padStart(3, '0');
-  speedEl.textContent = `${(START_DELAY / Math.max(58, START_DELAY - score * 2.5)).toFixed(1)}x`;
+  scoreEl.textContent = String(score).padStart(4, '0');
+  movesEl.textContent = moves;
+  bestEl.textContent = String(Math.max(best, score)).padStart(4, '0');
+  progressBar.style.width = `${Math.min(100, score / TARGET * 100)}%`;
   soundButton.textContent = `音效 ${soundOn ? '开' : '关'}`;
-}
-
-function roundedRect(x, y, width, height, radius) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, width, height, radius);
-}
-
-function draw(crashed = false) {
-  ctx.fillStyle = '#09140f';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = 'rgba(182, 255, 59, 0.055)';
-  ctx.lineWidth = 1;
-  for (let i = 1; i < GRID; i++) {
-    ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL); ctx.stroke();
-  }
-
-  const pulse = 0.72 + Math.sin(Date.now() / 170) * 0.16;
-  ctx.save();
-  ctx.shadowColor = '#ff5b78';
-  ctx.shadowBlur = 22;
-  ctx.fillStyle = `rgba(255, 91, 120, ${pulse})`;
-  roundedRect(food.x * CELL + 7, food.y * CELL + 7, CELL - 14, CELL - 14, 9);
-  ctx.fill();
-  ctx.restore();
-
-  snake.forEach((part, index) => {
-    const gap = index === 0 ? 3 : 5;
-    ctx.save();
-    ctx.shadowColor = index === 0 ? '#b6ff3b' : '#54f9b0';
-    ctx.shadowBlur = index === 0 ? 18 : 8;
-    ctx.fillStyle = crashed && index === 0 ? '#ff5b78' : index === 0 ? '#b6ff3b' : `hsl(${151 - Math.min(index, 30)}, 88%, ${61 - Math.min(index, 22) * .8}%)`;
-    roundedRect(part.x * CELL + gap, part.y * CELL + gap, CELL - gap * 2, CELL - gap * 2, index === 0 ? 9 : 7);
-    ctx.fill();
-    ctx.restore();
-  });
 }
 
 function beep(frequency, duration) {
@@ -163,94 +293,27 @@ function beep(frequency, duration) {
   const oscillator = audio.createOscillator();
   const gain = audio.createGain();
   oscillator.frequency.value = frequency;
-  oscillator.type = 'sine';
-  gain.gain.setValueAtTime(.05, audio.currentTime);
+  gain.gain.setValueAtTime(.035, audio.currentTime);
   gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration);
   oscillator.connect(gain).connect(audio.destination);
   oscillator.start();
   oscillator.stop(audio.currentTime + duration);
 }
 
-const directions = {
-  ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 }, W: { x: 0, y: -1 },
-  ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 }, S: { x: 0, y: 1 },
-  ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 }, A: { x: -1, y: 0 },
-  ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 }, D: { x: 1, y: 0 }
-};
+function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-document.addEventListener('keydown', event => {
-  if (directions[event.key]) {
-    event.preventDefault();
-    setDirection(directions[event.key]);
-  } else if (event.code === 'Space') {
-    event.preventDefault();
-    togglePause();
-  }
-});
-
-document.querySelectorAll('[data-direction]').forEach(button => {
-  button.addEventListener('pointerdown', () => {
-    const map = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
-    setDirection(map[button.dataset.direction]);
-  });
-});
-
-let touchStart = null;
-
-canvas.addEventListener('pointerdown', event => {
-  if (event.pointerType === 'mouse') return;
-  touchStart = { x: event.clientX, y: event.clientY };
-  canvas.setPointerCapture?.(event.pointerId);
-});
-
-canvas.addEventListener('pointermove', event => {
-  if (!touchStart || event.pointerType === 'mouse') return;
-  event.preventDefault();
-});
-
-canvas.addEventListener('pointerup', event => {
-  if (!touchStart || event.pointerType === 'mouse') return;
-  const dx = event.clientX - touchStart.x;
-  const dy = event.clientY - touchStart.y;
-  touchStart = null;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) {
-    setDirectionFromBoardTap(event.clientX, event.clientY);
-    return;
-  }
-  if (Math.abs(dx) > Math.abs(dy)) {
-    setDirection({ x: dx > 0 ? 1 : -1, y: 0 });
-  } else {
-    setDirection({ x: 0, y: dy > 0 ? 1 : -1 });
-  }
-});
-
-canvas.addEventListener('pointercancel', () => { touchStart = null; });
-
-canvas.addEventListener('click', event => {
-  setDirectionFromBoardTap(event.clientX, event.clientY);
-});
-
-function setDirectionFromBoardTap(clientX, clientY) {
-  if (!snake?.length || state === 'paused' || state === 'gameover') return;
-  const rect = canvas.getBoundingClientRect();
-  const headX = rect.left + (snake[0].x + 0.5) * rect.width / GRID;
-  const headY = rect.top + (snake[0].y + 0.5) * rect.height / GRID;
-  const dx = clientX - headX;
-  const dy = clientY - headY;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < rect.width / GRID) return;
-  setDirection(Math.abs(dx) > Math.abs(dy)
-    ? { x: dx > 0 ? 1 : -1, y: 0 }
-    : { x: 0, y: dy > 0 ? 1 : -1 });
-}
-
-startButton.addEventListener('click', () => state === 'paused' ? togglePause() : start());
-pauseButton.addEventListener('click', togglePause);
-restartButton.addEventListener('click', () => { reset(); start(); });
+canvas.addEventListener('pointerup', event => handlePick(boardPosition(event.clientX, event.clientY)));
+startButton.addEventListener('click', startGame);
+document.querySelector('#hintButton').addEventListener('click', showHint);
+document.querySelector('#shuffleButton').addEventListener('click', () => shuffleBoard(true));
+document.querySelector('#restartButton').addEventListener('click', startGame);
 soundButton.addEventListener('click', () => {
   soundOn = !soundOn;
-  localStorage.setItem('neon-snake-sound', soundOn ? 'on' : 'off');
+  localStorage.setItem('match-sound', soundOn ? 'on' : 'off');
   updateHud();
-  beep(520, .05);
+  beep(440, .04);
 });
 
-reset();
+makeBoard();
+updateHud();
+draw();
