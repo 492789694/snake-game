@@ -21,7 +21,7 @@
       <view class="overlay-text">{{overlayText}}</view>
       <button class="primary" bindtap="startGame">{{overlayButton}}</button>
     </view>
-    <text wx:if="{{!showOverlay}}" class="swipe-tip">滑动棋盘控制方向</text>
+    <text wx:if="{{!showOverlay}}" class="swipe-tip">点击棋盘控制方向</text>
   </view>
 
   <view class="actions">
@@ -36,5 +36,5 @@
     <button class="down" data-direction="down" bindtap="tapDirection">↓</button>
     <button class="right" data-direction="right" bindtap="tapDirection">→</button>
   </view>
-  <text class="footer">滑动棋盘或点击方向键移动</text>
+  <text class="footer">点击蛇头四周或方向键移动</text>
 </view>

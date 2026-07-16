@@ -6,7 +6,7 @@ Page({
     score: 0, scoreText: '000', highScoreText: '000', speedText: '1.0x',
     soundOn: true, paused: false, showOverlay: true,
     overlayTag: '准备好了吗？', overlayTitle: '点击开始游戏',
-    overlayText: '滑动棋盘，吃掉能量果实，别撞到墙壁和自己。', overlayButton: '开始游戏'
+    overlayText: '点击蛇头四周控制方向，吃掉能量果实。', overlayButton: '开始游戏'
   },
 
   onLoad() {
@@ -17,8 +17,8 @@ Page({
 
   onReady() {
     const query = this.createSelectorQuery();
-    query.select('#game').fields({ node: true, size: true }).exec(result => {
-      const { node, width, height } = result[0];
+    query.select('#game').fields({ node: true, size: true, rect: true }).exec(result => {
+      const { node, width, height, left, top } = result[0];
       const dpr = wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : wx.getSystemInfoSync().pixelRatio;
       node.width = width * dpr;
       node.height = height * dpr;
@@ -27,6 +27,7 @@ Page({
       this.ctx.scale(dpr, dpr);
       this.size = width;
       this.cell = width / GRID;
+      this.boardRect = { left, top, width, height };
       this.reset();
     });
   },
@@ -44,7 +45,7 @@ Page({
     this.placeFood();
     this.updateHud();
     this.draw();
-    this.setData({ paused: false, showOverlay: true, overlayTag: '准备好了吗？', overlayTitle: '点击开始游戏', overlayText: '滑动棋盘，吃掉能量果实，别撞到墙壁和自己。', overlayButton: '开始游戏' });
+    this.setData({ paused: false, showOverlay: true, overlayTag: '准备好了吗？', overlayTitle: '点击开始游戏', overlayText: '点击蛇头四周控制方向，吃掉能量果实。', overlayButton: '开始游戏' });
   },
 
   startGame() {
@@ -102,7 +103,21 @@ Page({
     const dx = t.clientX - this.touchStart.x;
     const dy = t.clientY - this.touchStart.y;
     this.touchStart = null;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 15) return;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 15) {
+      this.setDirectionFromTap(t.clientX, t.clientY);
+      return;
+    }
+    this.setDirection(Math.abs(dx) > Math.abs(dy) ? { x: dx > 0 ? 1 : -1, y: 0 } : { x: 0, y: dy > 0 ? 1 : -1 });
+  },
+
+  setDirectionFromTap(clientX, clientY) {
+    if (!this.boardRect || !this.snake?.length || this.state === 'paused' || this.state === 'gameover') return;
+    const rect = this.boardRect;
+    const headX = rect.left + (this.snake[0].x + 0.5) * rect.width / GRID;
+    const headY = rect.top + (this.snake[0].y + 0.5) * rect.height / GRID;
+    const dx = clientX - headX;
+    const dy = clientY - headY;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < rect.width / GRID) return;
     this.setDirection(Math.abs(dx) > Math.abs(dy) ? { x: dx > 0 ? 1 : -1, y: 0 } : { x: 0, y: dy > 0 ? 1 : -1 });
   },
 

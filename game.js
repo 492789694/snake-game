@@ -213,7 +213,10 @@ canvas.addEventListener('pointerup', event => {
   const dx = event.clientX - touchStart.x;
   const dy = event.clientY - touchStart.y;
   touchStart = null;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) {
+    setDirectionFromBoardTap(event.clientX, event.clientY);
+    return;
+  }
   if (Math.abs(dx) > Math.abs(dy)) {
     setDirection({ x: dx > 0 ? 1 : -1, y: 0 });
   } else {
@@ -222,6 +225,23 @@ canvas.addEventListener('pointerup', event => {
 });
 
 canvas.addEventListener('pointercancel', () => { touchStart = null; });
+
+canvas.addEventListener('click', event => {
+  setDirectionFromBoardTap(event.clientX, event.clientY);
+});
+
+function setDirectionFromBoardTap(clientX, clientY) {
+  if (!snake?.length || state === 'paused' || state === 'gameover') return;
+  const rect = canvas.getBoundingClientRect();
+  const headX = rect.left + (snake[0].x + 0.5) * rect.width / GRID;
+  const headY = rect.top + (snake[0].y + 0.5) * rect.height / GRID;
+  const dx = clientX - headX;
+  const dy = clientY - headY;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < rect.width / GRID) return;
+  setDirection(Math.abs(dx) > Math.abs(dy)
+    ? { x: dx > 0 ? 1 : -1, y: 0 }
+    : { x: 0, y: dy > 0 ? 1 : -1 });
+}
 
 startButton.addEventListener('click', () => state === 'paused' ? togglePause() : start());
 pauseButton.addEventListener('click', togglePause);
