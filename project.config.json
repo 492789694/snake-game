@@ -1,0 +1,15 @@
+{
+  "description": "可分享、点击即玩的微信贪吃蛇小程序",
+  "packOptions": { "ignore": ["index.html", "style.css", "game.js"] },
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "compileHotReLoad": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "neon-snake",
+  "miniprogramRoot": "./"
+}

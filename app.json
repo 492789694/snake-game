@@ -1,0 +1,12 @@
+{
+  "pages": ["pages/index/index"],
+  "window": {
+    "navigationBarTitleText": "霓虹贪吃蛇",
+    "navigationBarBackgroundColor": "#07100d",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#07100d",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

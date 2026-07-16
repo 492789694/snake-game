@@ -1,0 +1,40 @@
+<view class="page">
+  <view class="hero">
+    <view>
+      <text class="eyebrow">ARCADE / 经典模式</text>
+      <view class="title">霓虹贪吃蛇</view>
+    </view>
+    <button class="sound" bindtap="toggleSound">音效 {{soundOn ? '开' : '关'}}</button>
+  </view>
+
+  <view class="scoreboard">
+    <view><text>本局得分</text><strong>{{scoreText}}</strong></view>
+    <view><text>最高纪录</text><strong>{{highScoreText}}</strong></view>
+    <view><text>当前速度</text><strong>{{speedText}}</strong></view>
+  </view>
+
+  <view class="board" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd">
+    <canvas type="2d" id="game" class="canvas"></canvas>
+    <view wx:if="{{showOverlay}}" class="overlay">
+      <text class="eyebrow">{{overlayTag}}</text>
+      <view class="overlay-title">{{overlayTitle}}</view>
+      <view class="overlay-text">{{overlayText}}</view>
+      <button class="primary" bindtap="startGame">{{overlayButton}}</button>
+    </view>
+    <text wx:if="{{!showOverlay}}" class="swipe-tip">滑动棋盘控制方向</text>
+  </view>
+
+  <view class="actions">
+    <button bindtap="togglePause">{{paused ? '继续' : '暂停'}}</button>
+    <button bindtap="restart">重新开始</button>
+    <button open-type="share">分享好友</button>
+  </view>
+
+  <view class="controls">
+    <button class="up" data-direction="up" bindtap="tapDirection">↑</button>
+    <button class="left" data-direction="left" bindtap="tapDirection">←</button>
+    <button class="down" data-direction="down" bindtap="tapDirection">↓</button>
+    <button class="right" data-direction="right" bindtap="tapDirection">→</button>
+  </view>
+  <text class="footer">滑动棋盘或点击方向键移动</text>
+</view>

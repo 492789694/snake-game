@@ -1,0 +1,179 @@
+:root {
+  color-scheme: dark;
+  --bg: #07100d;
+  --panel: rgba(17, 30, 25, 0.86);
+  --line: rgba(172, 255, 73, 0.18);
+  --lime: #b6ff3b;
+  --mint: #54f9b0;
+  --cream: #edf5dd;
+  --muted: #8c9c91;
+  --danger: #ff5b78;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 18px;
+  overflow-x: hidden;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--cream);
+  background:
+    radial-gradient(circle at 15% 5%, rgba(84, 249, 176, .14), transparent 28rem),
+    radial-gradient(circle at 90% 90%, rgba(182, 255, 59, .08), transparent 30rem),
+    var(--bg);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .35;
+  background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+button { font: inherit; }
+
+.game-shell { width: min(100%, 680px); position: relative; }
+
+.hero, .scoreboard, .actions { display: flex; align-items: center; justify-content: space-between; }
+.hero { margin-bottom: 20px; }
+.hero h1 { margin: 2px 0 0; font-size: clamp(2rem, 7vw, 3.5rem); line-height: .95; letter-spacing: -.055em; }
+.eyebrow { margin: 0; color: var(--lime); font-size: .68rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+
+.icon-button, .secondary-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--cream);
+  background: rgba(255,255,255,.035);
+  cursor: pointer;
+}
+.icon-button { padding: 10px 14px; font-size: .75rem; }
+.secondary-button { flex: 1; padding: 13px 16px; font-weight: 700; }
+button:hover { border-color: rgba(182,255,59,.55); transform: translateY(-1px); }
+button:active { transform: translateY(1px); }
+
+.scoreboard {
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+}
+.scoreboard div { min-width: 0; }
+.scoreboard span { display: block; color: var(--muted); font-size: .65rem; font-weight: 700; letter-spacing: .09em; }
+.scoreboard strong { display: block; margin-top: 3px; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+
+.board-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(182,255,59,.26);
+  border-radius: 24px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.34), inset 0 0 50px rgba(84,249,176,.03);
+  background: #09140f;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+canvas { width: 100%; aspect-ratio: 1; display: block; touch-action: none; }
+.swipe-hint {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 2;
+  margin: 0;
+  padding: 6px 11px;
+  border-radius: 999px;
+  color: rgba(237,245,221,.72);
+  background: rgba(4,11,8,.58);
+  font-size: .66rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.mobile-tip { display: none; }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  text-align: center;
+  background: rgba(4, 11, 8, .73);
+  backdrop-filter: blur(7px);
+  transition: opacity .2s ease;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+.overlay h2 { margin: 10px 0 8px; font-size: clamp(1.8rem, 6vw, 3rem); letter-spacing: -.045em; }
+.overlay > p:not(.eyebrow) { max-width: 360px; margin: 0 0 24px; color: var(--muted); line-height: 1.6; }
+.primary-button {
+  padding: 13px 24px;
+  border: 0;
+  border-radius: 999px;
+  color: #102006;
+  background: var(--lime);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 0 28px rgba(182,255,59,.24);
+}
+
+.actions { gap: 10px; margin-top: 12px; }
+.mobile-controls { display: none; width: 210px; margin: 18px auto 0; grid-template: repeat(2, 58px) / repeat(3, 58px); gap: 8px; justify-content: center; }
+.mobile-controls button { border: 1px solid var(--line); border-radius: 16px; color: var(--cream); background: var(--panel); font-size: 1.3rem; }
+.mobile-controls button:nth-child(1) { grid-column: 2; }
+.mobile-controls button:nth-child(2) { grid-row: 2; grid-column: 1; }
+.mobile-controls button:nth-child(3) { grid-row: 2; grid-column: 2; }
+.mobile-controls button:nth-child(4) { grid-row: 2; grid-column: 3; }
+footer { margin-top: 16px; color: #637268; text-align: center; font-size: .7rem; letter-spacing: .06em; }
+
+@media (max-width: 700px), (pointer: coarse) {
+  body { min-height: 100svh; padding: max(12px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom)); align-items: start; overscroll-behavior: none; }
+  .mobile-controls { display: grid; }
+  .hero { margin-bottom: 10px; }
+  .hero h1 { font-size: clamp(1.8rem, 9vw, 2.7rem); }
+  .scoreboard { padding: 10px 14px; }
+  .board-wrap { border-radius: 18px; }
+  .swipe-hint { display: block; }
+  .overlay { padding: 20px; }
+  .actions { margin-top: 9px; }
+  .mobile-controls { margin-top: 12px; }
+  .mobile-controls button { min-width: 58px; min-height: 58px; touch-action: manipulation; }
+  .desktop-tip { display: none; }
+  .mobile-tip { display: inline; }
+  footer { margin-top: 10px; }
+}
+
+@media (max-width: 390px) {
+  .scoreboard span { font-size: .58rem; }
+  .scoreboard strong { font-size: 1.08rem; }
+  .mobile-controls { grid-template: repeat(2, 52px) / repeat(3, 52px); }
+  .mobile-controls button { min-width: 52px; min-height: 52px; }
+}
+
+@media (orientation: landscape) and (pointer: coarse) and (max-height: 520px) {
+  body { place-items: start center; }
+  .game-shell { width: min(94vw, 980px); display: grid; grid-template-columns: minmax(280px, 62vh) minmax(220px, 1fr); gap: 8px 18px; }
+  .hero, .scoreboard, .actions, .mobile-controls, footer { grid-column: 2; }
+  .hero { grid-row: 1; }
+  .scoreboard { grid-row: 2; }
+  .board-wrap { grid-column: 1; grid-row: 1 / span 5; align-self: start; }
+  .actions { grid-row: 3; }
+  .mobile-controls { grid-row: 4; margin-top: 2px; }
+  footer { grid-row: 5; }
+}
+
+@media (max-height: 780px) and (min-width: 700px) {
+  .game-shell { width: min(100%, 570px); }
+  .hero { margin-bottom: 12px; }
+  .hero h1 { font-size: 2.2rem; }
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#111a17">
+  <title>霓虹贪吃蛇</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">ARCADE / 经典模式</p>
+        <h1>霓虹贪吃蛇</h1>
+      </div>
+      <button id="soundButton" class="icon-button" type="button" aria-label="切换音效">音效 开</button>
+    </header>
+
+    <section class="scoreboard" aria-label="游戏数据">
+      <div><span>本局得分</span><strong id="score">000</strong></div>
+      <div><span>最高纪录</span><strong id="highScore">000</strong></div>
+      <div><span>当前速度</span><strong id="speed">1.0x</strong></div>
+    </section>
+
+    <section class="board-wrap">
+      <canvas id="game" width="600" height="600" aria-label="贪吃蛇游戏区域"></canvas>
+      <p class="swipe-hint" aria-hidden="true">在棋盘上滑动控制方向</p>
+      <div id="overlay" class="overlay">
+        <p id="overlayTag" class="eyebrow">准备好了吗？</p>
+        <h2 id="overlayTitle">按方向键开始</h2>
+        <p id="overlayText">吃掉能量果实，别撞到墙壁和自己。</p>
+        <button id="startButton" class="primary-button" type="button">开始游戏</button>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="pauseButton" class="secondary-button" type="button">暂停</button>
+      <button id="restartButton" class="secondary-button" type="button">重新开始</button>
+    </div>
+
+    <section class="mobile-controls" aria-label="触屏方向控制">
+      <button data-direction="up" aria-label="向上">↑</button>
+      <button data-direction="left" aria-label="向左">←</button>
+      <button data-direction="down" aria-label="向下">↓</button>
+      <button data-direction="right" aria-label="向右">→</button>
+    </section>
+
+    <footer><span class="desktop-tip">方向键 / WASD 移动 · 空格暂停</span><span class="mobile-tip">滑动棋盘或点击方向键移动</span></footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
