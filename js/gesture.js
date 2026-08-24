@@ -82,8 +82,9 @@ export function createHandAnalyzer() {
 /* ---------- MediaPipe 加载与相机循环 ---------- */
 
 // 资源位置：本地内置优先（大陆微信环境可离线工作），CDN 兜底
-// 注意：MediaPipe 包用 .js 后缀（部分静态托管对 .mjs 返回错误的 MIME，浏览器会拒载）
-const LOCAL_MP = new URL('../vendor/mediapipe/', import.meta.url).href;
+// 注意1：MediaPipe 包用 .js 后缀（部分静态托管对 .mjs 返回错误的 MIME，浏览器会拒载）
+// 注意2：URL 相对路径基于 import.meta.url（/js/gesture.js），vendor 在 ./vendor/mediapipe/
+const LOCAL_MP = new URL('./vendor/mediapipe/', import.meta.url).href;
 const LOCAL_ESM = LOCAL_MP + 'vision_bundle.js';
 const LOCAL_WASM = LOCAL_MP + 'wasm';
 const LOCAL_MODEL = LOCAL_MP + 'hand_landmarker.task';
