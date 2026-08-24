@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>摄像头自检 · 竹知了</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #1d1a14; color: #e8ddc0; padding: 18px; margin: 0; }
+  h1 { font-size: 18px; color: #d8b45f; }
+  button { font-size: 17px; padding: 12px 26px; border-radius: 24px; border: none; background: #3f8f4f; color: #fff; margin: 8px 0; }
+  #log { margin-top: 12px; white-space: pre-wrap; font-size: 13px; line-height: 1.7; }
+  .ok { color: #7dd67a; } .fail { color: #ff7a6a; } .info { color: #d8c07a; }
+  #videoBox { position: relative; width: 240px; height: 180px; background: #000; border-radius: 10px; overflow: hidden; margin-top: 8px; display: none; }
+  video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  video { transform: scaleX(-1); }
+</style>
+</head>
+<body>
+<h1>🎥 摄像头手势 · 分阶段自检</h1>
+<p>点击下面按钮，页面会逐步显示每一阶段的成败与具体错误。</p>
+<button id="go">开始自检</button>
+<div id="videoBox"><video id="v" playsinline muted></video><canvas id="c" width="240" height="180"></canvas></div>
+<div id="log"></div>
+<script type="module" src="camera-check.js"></script>
+</body>
+</html>

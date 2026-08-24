@@ -97,17 +97,25 @@ export async function startHandCamera({ video, canvas, onResult, onStatus }) {
 
   const setStatus = (cls, msg) => onStatus && onStatus(cls, msg);
 
+  let stage = '启动';
+  let detectErrs = 0;
   try {
-    setStatus('load', '加载手部模型…');
+    stage = '加载模型包';
+    setStatus('load', '加载模型包…');
     const vision = await loadTasksVision();
+    stage = '加载 WASM';
+    setStatus('load', '加载 WASM…');
     const fileset = await loadFileset(vision);
-
+    stage = '请求摄像头';
+    setStatus('load', '请求摄像头…');
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false,
     });
     video.srcObject = stream;
     await video.play();
+    stage = '创建识别器';
+    setStatus('load', '创建识别器…');
 
     const createOpts = (delegate, modelUrl) => vision.HandLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: modelUrl, delegate },
@@ -130,7 +138,7 @@ export async function startHandCamera({ video, canvas, onResult, onStatus }) {
     }
     setStatus('live', '手势识别中');
   } catch (e) {
-    setStatus('err', String(e && e.message || e));
+    setStatus('err', `[${stage}] ${e && e.message || e}`);
     return { stop: () => {} };
   }
 
@@ -144,7 +152,11 @@ export async function startHandCamera({ video, canvas, onResult, onStatus }) {
     lastDetect = now;
 
     let res = null;
-    try { res = landmarker.detectForVideo(video, now); } catch (e) { return; }
+    try { res = landmarker.detectForVideo(video, now); } catch (e) {
+      detectErrs++;
+      if (detectErrs === 1) setStatus('err', `[识别循环] ${e && e.message || e}`);
+      return;
+    }
 
     const W = canvas.width, H = canvas.height;
     g2d.clearRect(0, 0, W, H);

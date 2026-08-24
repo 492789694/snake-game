@@ -218,7 +218,7 @@ ui.el.btnCam.addEventListener('click', async () => {
     canvas: $('handCv'),
     onResult: (r) => bus.report('hand', r.v > 0.02 ? r.v : 0, r.dir),
     onStatus: (cls, msg) => {
-      ui.setHandStatus(cls);
+      ui.setHandStatus(cls, msg);
       if (cls === 'err') {
         ui.showToast('摄像头不可用：' + msg);
         ui.setCamActive(false);

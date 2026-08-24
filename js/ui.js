@@ -15,7 +15,7 @@ export function initUI() {
     hint: $('hint'),
     toasts: $('toasts'), confetti: $('confetti'), flash: $('flash'),
     helpModal: $('helpModal'),
-    handBox: $('handBox'), handStatus: $('handStatus'),
+    handBox: $('handBox'), handStatus: $('handStatus'), handLabel: $('handLabel'),
     btnCam: $('btnCam'), btnShake: $('btnShake'), btnSound: $('btnSound'), btnHelp: $('btnHelp'),
   };
 
@@ -215,8 +215,9 @@ export function initUI() {
     el.btnShake.classList.toggle('on', active);
     el.btnShake.classList.toggle('off', !active);
   }
-  function setHandStatus(cls) {
+  function setHandStatus(cls, msg) {
     el.handStatus.className = 'dot ' + cls;
+    if (msg && el.handLabel) el.handLabel.textContent = msg;
   }
   function setHandVisible(show) {
     el.handBox.classList.toggle('hidden', !show);
