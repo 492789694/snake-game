@@ -158,24 +158,33 @@ export async function startHandCamera({ video, canvas, onResult, onStatus }) {
     stage = '创建识别器';
     setStatus('load', '创建识别器…');
 
+    // WebGL2 预检：不支持就直接走 CPU，避免 GPU 尝试白等一轮（很多手机/微信内核如此）
+    let hasGL2 = false;
+    try {
+      const c = document.createElement('canvas');
+      hasGL2 = !!(c.getContext('webgl2') || c.getContext('webgl'));
+    } catch (e) { hasGL2 = false; }
+
     const createOpts = (delegate, modelUrl) => vision.HandLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: modelUrl, delegate },
       runningMode: 'VIDEO',
       numHands: 2,
     });
-    try {
-      try {
-        landmarker = await createOpts('GPU', MODEL_URLS[0]);
-      } catch (e) {
-        landmarker = await createOpts('CPU', MODEL_URLS[0]);
+    const tryDelegates = async (modelUrl) => {
+      if (hasGL2) {
+        try {
+          setStatus('load', '创建识别器(GPU)…');
+          return await createOpts('GPU', modelUrl);
+        } catch (e) { /* 回退 CPU */ }
       }
+      setStatus('load', '创建识别器(CPU)…');
+      return await createOpts('CPU', modelUrl);
+    };
+    try {
+      landmarker = await tryDelegates(MODEL_URLS[0]);
     } catch (e) {
       // 本地模型失败 → 退回 CDN 模型
-      try {
-        landmarker = await createOpts('GPU', MODEL_URLS[1]);
-      } catch (e2) {
-        landmarker = await createOpts('CPU', MODEL_URLS[1]);
-      }
+      landmarker = await tryDelegates(MODEL_URLS[1]);
     }
     setStatus('live', '手势识别中');
   } catch (e) {
