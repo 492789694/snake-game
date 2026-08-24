@@ -1,55 +1,196 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#101412">
-  <title>果冻消消乐</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#3e5c46" />
+<title>竹知了 · 3D 蝉鸣模拟器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8E%8B%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="css/style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./js/vendor/three.module.js",
+    "three/addons/": "./js/vendor/",
+    "three/addons/controls/OrbitControls.js": "./js/vendor/OrbitControls.js"
+  }
+}
+</script>
 </head>
 <body>
-  <main class="game-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">MATCH CLUB / 今日挑战</p>
-        <h1>果冻消消乐</h1>
+<div id="app">
+  <canvas id="gl"></canvas>
+
+  <div id="hud">
+    <header id="topbar">
+      <div id="title">
+        <h1>🎋 竹知了</h1>
+        <p>3D 蝉鸣模拟 · 搓一搓，让它叫起来</p>
       </div>
-      <button id="soundButton" class="pill-button" type="button">音效 开</button>
+
+      <div id="scoreCard" class="card">
+        <div class="score-line">得分 <b id="score">0</b></div>
+        <div class="sub" id="bestLine">🏆 最高分 0 · 最高转速 0 RPM</div>
+      </div>
+
+      <div id="ctrlBtns">
+        <button id="btnCam" class="icon-btn" title="摄像头手势控制">🎥</button>
+        <button id="btnShake" class="icon-btn" title="摇一摇（手机）">📳</button>
+        <button id="btnSound" class="icon-btn on" title="静音">🔊</button>
+        <button id="btnHelp" class="icon-btn" title="玩法说明">❓</button>
+      </div>
     </header>
 
-    <section class="mission" aria-label="关卡目标">
-      <div class="level-badge"><span>关卡</span><strong>01</strong></div>
-      <div class="mission-copy">
-        <span>本局目标</span>
-        <strong>获得 <b id="targetScore">3000</b> 分</strong>
-        <div class="progress"><i id="progressBar"></i></div>
+    <aside id="col-left">
+      <div id="cardMiles" class="card">
+        <h2>🏔 转速里程碑</h2>
+        <ul id="milestones"></ul>
       </div>
-    </section>
-
-    <section class="stats" aria-label="游戏数据">
-      <div><span>得分</span><strong id="score">0000</strong></div>
-      <div><span>剩余步数</span><strong id="moves">25</strong></div>
-      <div><span>最高分</span><strong id="best">0000</strong></div>
-    </section>
-
-    <section id="boardWrap" class="board-wrap">
-      <canvas id="game" width="640" height="640" aria-label="消消乐游戏棋盘"></canvas>
-      <div id="combo" class="combo" aria-live="polite"></div>
-      <div id="overlay" class="overlay">
-        <p id="overlayTag" class="eyebrow">轻松一下</p>
-        <h2 id="overlayTitle">点击开始消除</h2>
-        <p id="overlayText">依次点击两个相邻果冻，凑出三个或更多同色果冻。</p>
-        <button id="startButton" class="primary-button" type="button">开始游戏</button>
+      <div id="cardChal" class="card">
+        <h2>🏆 今日挑战</h2>
+        <div id="challenges"></div>
       </div>
-    </section>
+    </aside>
 
-    <div class="actions">
-      <button id="hintButton" type="button">提示</button>
-      <button id="shuffleButton" type="button">重排</button>
-      <button id="restartButton" type="button">重新开始</button>
+    <aside id="col-right">
+      <div id="handBox" class="card hidden">
+        <video id="handVideo" playsinline muted></video>
+        <canvas id="handCv" width="160" height="120"></canvas>
+        <span id="handStatus" class="dot"></span>
+        <span id="handLabel">手势识别</span>
+      </div>
+    </aside>
+
+    <footer id="bottombar">
+      <div id="gaugeCard" class="card">
+        <svg id="gauge" viewBox="0 0 220 132" aria-label="转速表">
+          <defs>
+            <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#3f8f4f"/>
+              <stop offset="55%" stop-color="#d8a522"/>
+              <stop offset="100%" stop-color="#c94f2f"/>
+            </linearGradient>
+          </defs>
+          <path d="M 20 115 A 90 90 0 0 1 200 115" fill="none" stroke="#e9dcba" stroke-width="13" stroke-linecap="round"/>
+          <path id="gaugeArcFill" d="M 20 115 A 90 90 0 0 1 200 115" fill="none" stroke="url(#gaugeGrad)" stroke-width="13" stroke-linecap="round"
+                stroke-dasharray="282.75" stroke-dashoffset="282.75"/>
+          <g id="gaugeTicks"></g>
+          <g id="gaugeNeedle" transform="rotate(-90 110 115)">
+            <line x1="110" y1="115" x2="110" y2="40" stroke="#6b4a1f" stroke-width="3.4" stroke-linecap="round"/>
+            <circle cx="110" cy="115" r="6.5" fill="#6b4a1f"/>
+            <circle cx="110" cy="115" r="2.6" fill="#e9dcba"/>
+          </g>
+          <text x="20" y="129" class="g-label">0</text>
+          <text x="190" y="129" class="g-label" text-anchor="end">1500</text>
+        </svg>
+        <div id="gaugeText">
+          <div id="rpmVal">0</div>
+          <div class="unit">RPM</div>
+          <div id="hzVal">音高 — Hz</div>
+        </div>
+        <canvas id="fft" width="76" height="64"></canvas>
+      </div>
+
+      <div id="combo" class="card hidden">🔥 连鸣 <b id="comboTime">0.0</b>s <span id="mult">×1</span></div>
+      <button id="modeChip" class="chip">🖐 搓动模式 · 双击切换视角</button>
+    </footer>
+  </div>
+
+  <div id="hint">
+    <div class="hint-card">
+      <div class="hand">👋</div>
+      按住画面<b>快速左右搓动</b>，让竹知了转起来！
+      <div class="hint-sub">双指拧转 · 摇一摇 · 摄像头手势 · 按住空格键</div>
     </div>
-    <p class="tip">点击两个相邻果冻进行交换</p>
-  </main>
-  <script src="game.js"></script>
+  </div>
+
+  <div id="toasts"></div>
+  <div id="flash" class="hidden"></div>
+  <div id="confetti"></div>
+  <div id="errbox" class="hidden"></div>
+
+  <div id="helpModal" class="modal hidden">
+    <div class="modal-card">
+      <button id="btnCloseHelp" class="icon-btn">✕</button>
+      <h1>🎋 竹知了 · 玩法与原理</h1>
+
+      <section>
+        <h2>🧸 这是什么</h2>
+        <p>竹知了是中国传统发声玩具：一截竹筒，一端蒙上竹膜或牛皮纸，膜中央开小孔；
+        棉线穿过小孔，一头系在筒内的横签上，另一头系在竹柄上。
+        搓动/甩动竹柄，棉线绞动带动竹筒绕线轴高速旋转，
+        <b>棉线与膜孔边缘摩擦 → 膜振动 → 竹筒共鸣放大</b>，发出类似蝉鸣的“哇哇”声。</p>
+        <svg id="diagram" viewBox="0 0 320 150" role="img" aria-label="竹知了构造图">
+          <line x1="52" y1="18" x2="52" y2="128" stroke="#8a6d3b" stroke-width="8" stroke-linecap="round"/>
+          <text x="30" y="78" class="dg">竹柄</text>
+          <path d="M 52 20 C 96 44, 118 96, 168 118" fill="none" stroke="#b9a77e" stroke-width="3" stroke-dasharray="6 4"/>
+          <text x="98" y="64" class="dg">棉线</text>
+          <g transform="translate(150,104) rotate(-24)">
+            <rect x="-74" y="-24" width="148" height="48" rx="10" fill="#d8b45f" stroke="#8a6a33" stroke-width="2"/>
+            <rect x="-74" y="-18" width="148" height="6" fill="#a07c3c" opacity=".55"/>
+            <rect x="-74" y="12" width="148" height="6" fill="#a07c3c" opacity=".55"/>
+            <ellipse cx="74" cy="0" rx="9" ry="24" fill="#2b2012"/>
+            <circle cx="-74" cy="0" r="24" fill="#dcc28d" stroke="#8a6a33" stroke-width="2"/>
+            <circle cx="-74" cy="0" r="5" fill="#2b2012"/>
+            <circle cx="-74" cy="0" r="2.4" fill="#dcc28d"/>
+          </g>
+          <text x="216" y="30" class="dg">膜(竹片/牛皮纸)</text>
+          <text x="216" y="46" class="dg">中央小孔 + 棉线</text>
+          <text x="216" y="118" class="dg">竹筒(共鸣腔)</text>
+          <text x="216" y="134" class="dg">开口端</text>
+          <line x1="216" y1="52" x2="206" y2="82" stroke="#8a6d3b" stroke-width="1" marker-end=""/>
+          <line x1="216" y1="108" x2="202" y2="112" stroke="#8a6d3b" stroke-width="1"/>
+        </svg>
+      </section>
+
+      <section>
+        <h2>🎮 怎么玩</h2>
+        <ul class="how">
+          <li><b>🖐 搓动</b>：按住画面（或按住竹知了附近）快速左右来回搓 —— 搓得越快转得越快，叫得越响。</li>
+          <li><b>🤏 双指拧转</b>（触屏）：两根手指在屏幕上像搓木柄一样拧。</li>
+          <li><b>📳 摇一摇</b>：摇动手机，点“📳”按钮开启（iPhone 需授权）。</li>
+          <li><b>🎥 摄像头手势</b>：点“🎥”开启，单手在镜头前快速左右摆动，或双手做“搓手”动作。</li>
+          <li><b>⌨️ 键盘</b>：按住 <kbd>空格</kbd> / <kbd>←</kbd> / <kbd>→</kbd> 自动搓动。</li>
+          <li><b>🔭 视角</b>：双击画面或右键拖动旋转视角；点底部“模式”按钮切换，视角模式下可拖动旋转、滚轮缩放，细看竹节与结构。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>🔊 声音与物理（和真玩具一样）</h2>
+        <ul class="how">
+          <li>搓动给竹筒一个<b>初始角速度</b>，之后受<b>空气阻力</b>（∝转速²）与棉线摩擦影响自然衰减 —— 不搓就会慢慢停下。</li>
+          <li>音调、响度由<b>实时转速连续驱动</b>：转速越高，摩擦频率越高 → 音调越高、越响；转速降下来，声音自然衰弱消失。</li>
+          <li>转速快时离心力把竹筒甩起绕圈（锥摆），转速慢时垂下来摇摆。</li>
+          <li>声音全部由 <b>Web Audio API 实时合成</b>（锯齿波 + 摩擦噪声 + 竹筒共鸣滤波），没有任何录音文件。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>🏆 挑战规则</h2>
+        <ul class="how">
+          <li><b>转速里程碑</b>：120「初鸣」→ 300「蝉声渐起」→ 600「烈日蝉鸣」→ 900「群蝉齐鸣」→ 1200「震翅狂鸣」→ 1500「竹蝉之王」，首次达到有加分。</li>
+          <li><b>连续鸣叫</b>：持续鸣叫每 4 秒倍率 +1（最高 ×8）；中断超过 1.5 秒倍率归零。</li>
+          <li><b>今日挑战</b>：冲上 900 RPM / 连续鸣叫 20 秒，各奖 1500 分。</li>
+          <li><b>纪录</b>：最高分、最高转速、最长连鸣保存在本机浏览器中。</li>
+        </ul>
+      </section>
+
+      <p class="foot">构造与发声原理参考：百度百科《竹知了》、国立中山大学物理演示《竹蟬的聲學》、旋转气鸣器（bullroarer）声学研究 —— 音调随转速升高。</p>
+      <button id="btnGotIt" class="primary">开始玩！</button>
+    </div>
+  </div>
+</div>
+<script>
+  // 早期错误捕获（若 CDN/模块加载失败也能看到提示）
+  window.addEventListener('error', function (e) {
+    var el = document.getElementById('errbox');
+    if (el) { el.hidden = false; el.textContent += 'JS: ' + (e.message || e.type) + ' ｜ '; }
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var el = document.getElementById('errbox');
+    if (el) { el.hidden = false; el.textContent += '异步: ' + (e.reason && e.reason.message || e.reason) + ' ｜ '; }
+  });
+</script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
