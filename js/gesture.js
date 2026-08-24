@@ -8,6 +8,45 @@
 
 import { createRubDetector } from './input.js';
 
+/* ---------- 修复：MediaPipe 脚本加载器与无 CORS 静态托管 ----------
+ * MediaPipe 内部用 document.createElement('script') + crossOrigin='anonymous'
+ * 加载 wasm 脚本（见 vision_bundle.js 的 Wo 函数）。同源加载若服务器未返回
+ * Access-Control-Allow-Origin 头，浏览器会以 CORS 失败拒绝该脚本，
+ * 且错误对象是无 message 的 ErrorEvent（表现为 "object event"）。
+ * 本修复屏蔽动态 script 元素上的 crossOrigin 赋值——同源脚本无需 CORS。 */
+let scriptPatchDone = false;
+function patchScriptCrossOrigin() {
+  if (scriptPatchDone || typeof document === 'undefined') return;
+  scriptPatchDone = true;
+  const origCreate = document.createElement.bind(document);
+  document.createElement = function (tagName, options) {
+    const el = origCreate(tagName, options);
+    if (String(tagName).toLowerCase() === 'script') {
+      try {
+        Object.defineProperty(el, 'crossOrigin', {
+          configurable: true,
+          get() { return null; },
+          set() { /* 屏蔽：同源脚本加载不需要 CORS 模式 */ },
+        });
+      } catch (e) { /* 忽略 */ }
+    }
+    return el;
+  };
+}
+
+/** 详尽描述错误对象（普通 Error / ErrorEvent / 裸对象都能看清） */
+function describeError(e) {
+  if (!e) return '未知错误';
+  const parts = [];
+  if (e.name) parts.push('name=' + e.name);
+  if (e.message) parts.push('message=' + e.message);
+  if (e.constructor && e.constructor.name) parts.push('type=' + e.constructor.name);
+  if (e.type) parts.push('event=' + e.type);
+  if (e.target && e.target.src) parts.push('src=' + e.target.src);
+  if (typeof e.filename === 'string' && e.filename) parts.push('file=' + e.filename + ':' + (e.lineno || ''));
+  return parts.length ? parts.join(' ') : String(e);
+}
+
 export const HAND_CONNECTIONS = [
   [0,1],[1,2],[2,3],[3,4],
   [0,5],[5,6],[6,7],[7,8],
@@ -97,6 +136,7 @@ export async function startHandCamera({ video, canvas, onResult, onStatus }) {
 
   const setStatus = (cls, msg) => onStatus && onStatus(cls, msg);
 
+  patchScriptCrossOrigin();
   let stage = '启动';
   let detectErrs = 0;
   try {
@@ -138,7 +178,7 @@ export async function startHandCamera({ video, canvas, onResult, onStatus }) {
     }
     setStatus('live', '手势识别中');
   } catch (e) {
-    setStatus('err', `[${stage}] ${e && e.message || e}`);
+    setStatus('err', `[${stage}] ${describeError(e)}`);
     return { stop: () => {} };
   }
 
@@ -154,7 +194,7 @@ export async function startHandCamera({ video, canvas, onResult, onStatus }) {
     let res = null;
     try { res = landmarker.detectForVideo(video, now); } catch (e) {
       detectErrs++;
-      if (detectErrs === 1) setStatus('err', `[识别循环] ${e && e.message || e}`);
+      if (detectErrs === 1) setStatus('err', `[识别循环] ${describeError(e)}`);
       return;
     }
 
